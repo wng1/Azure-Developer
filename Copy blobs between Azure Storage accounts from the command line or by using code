@@ -1,0 +1,92 @@
+###################Create and add data to hot storage
+
+HOT_STORAGE_NAME=hotstorage$RANDOM
+HOT_KEY="<source account key>"
+
+LOCATION=<location>
+
+az storage account create \
+  --location $LOCATION \
+  --name $HOT_STORAGE_NAME \
+  --resource-group "[Sandbox resource group]" \
+  --sku Standard_RAGRS \
+  --kind BlobStorage \
+  --access-tier Hot
+
+az storage account keys list \
+  --account-name $HOT_STORAGE_NAME \
+  --resource-group "[Sandbox resource group]" \
+  --output table
+
+az storage container create \
+  --name specifications \
+  --account-name $HOT_STORAGE_NAME \
+  --account-key $HOT_KEY
+
+git clone https://github.com/MicrosoftDocs/mslearn-copy-move-blobs-from-containers-or-storage-accounts sample
+
+az storage blob upload-batch \
+  --destination specifications \
+  --pattern "*.md" \
+  --source ~/sample/specifications \
+  --account-name $HOT_STORAGE_NAME \
+  --account-key $HOT_KEY
+
+az storage blob list \
+  --container-name specifications \
+  --output table \
+  --account-name $HOT_STORAGE_NAME \
+  --account-key $HOT_KEY
+
+###########Create a cool storage account
+
+COOL_STORAGE_NAME=coolstorage$RANDOM
+COOL_KEY="<source account key>"
+
+az storage account create \
+  --location $LOCATION \
+  --name $COOL_STORAGE_NAME \
+  --resource-group "[Sandbox resource group]" \
+  --sku Standard_RAGRS \
+  --kind BlobStorage \
+  --access-tier Cool
+
+az storage account keys list \
+  --account-name $COOL_STORAGE_NAME \
+  --resource-group "[Sandbox resource group]" \
+  --output table
+
+az storage blob list \
+  --container-name archived-specifications \
+  --account-name $COOL_STORAGE_NAME \
+  --account-key $COOL_KEY \
+  --output table
+
+##################Copy blobs to cool storage
+
+az storage blob copy start-batch \
+  --destination-container archived-specifications \
+  --account-name $COOL_STORAGE_NAME \
+  --account-key $COOL_KEY \
+  --source-account-name "$HOT_STORAGE_NAME" \
+  --source-account-key $HOT_KEY \
+  --source-container specifications \
+  --dryrun
+
+az storage blob copy start-batch \
+  --destination-container archived-specifications \
+  --account-name $COOL_STORAGE_NAME \
+  --account-key $COOL_KEY \
+  --source-account-name "$HOT_STORAGE_NAME" \
+  --source-account-key $HOT_KEY \
+  --source-container specifications
+
+az storage blob list \
+  --container-name archived-specifications \
+  --account-name $COOL_STORAGE_NAME \
+  --account-key $COOL_KEY \
+  --output table
+
+
+
+
